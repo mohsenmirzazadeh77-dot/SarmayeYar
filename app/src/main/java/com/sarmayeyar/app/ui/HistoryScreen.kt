@@ -12,24 +12,56 @@ import com.sarmayeyar.app.util.Formatters
 
 @Composable
 fun HistoryScreen(history: List<HistoryPoint>) {
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("رشد سرمایه", style = MaterialTheme.typography.headlineMedium)
+    Column(
+        Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
+        Text(
+            "رشد سرمایه",
+            style = MaterialTheme.typography.headlineMedium
+        )
+
         Spacer(Modifier.height(16.dp))
+
         if (history.size < 2) {
             Text("برای نمایش نمودار، حداقل دو ثبت ارزش سرمایه لازم است.")
         } else {
             val min = history.minOf { it.totalToman }.toFloat()
             val max = history.maxOf { it.totalToman }.toFloat()
-            Canvas(Modifier.fillMaxWidth().height(220.dp)) {
+
+            val primaryColor = MaterialTheme.colorScheme.primary
+
+            Canvas(
+                Modifier
+                    .fillMaxWidth()
+                    .height(220.dp)
+            ) {
                 val range = (max - min).coerceAtLeast(1f)
+
                 val pts = history.mapIndexed { i, p ->
-                    val x = if (history.size == 1) 0f else size.width * i / (history.size - 1)
-                    val y = size.height - ((p.totalToman - min) / range) * size.height
+                    val x = size.width * i / (history.size - 1)
+
+                    val y =
+                        size.height -
+                            ((p.totalToman - min) / range) * size.height
+
                     Offset(x, y)
                 }
-                for (i in 1 until pts.size) drawLine(pts[i-1], pts[i], strokeWidth = 5f)
+
+                for (i in 1 until pts.size) {
+                    drawLine(
+                        color = primaryColor,
+                        start = pts[i - 1],
+                        end = pts[i],
+                        strokeWidth = 5f
+                    )
+                }
             }
-            Text("آخرین ارزش: ${Formatters.toman(history.last().totalToman)}")
+
+            Text(
+                "آخرین ارزش: ${Formatters.toman(history.last().totalToman)}"
+            )
         }
     }
 }
