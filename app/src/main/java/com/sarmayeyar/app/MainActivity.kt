@@ -31,9 +31,7 @@ class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -43,9 +41,8 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun App(
-    vm: MainViewModel
-) {
+private fun App(vm: MainViewModel) {
+
     var darkMode by remember {
         mutableStateOf(false)
     }
@@ -57,29 +54,19 @@ private fun App(
         }
     ) {
 
-        val assets by
-            vm.assets.collectAsState()
-
-        val history by
-            vm.history.collectAsState()
-
-        val prices by
-            vm.prices.collectAsState()
-
-        val busy by
-            vm.busy.collectAsState()
+        val assets by vm.assets.collectAsState()
+        val history by vm.history.collectAsState()
+        val prices by vm.prices.collectAsState()
+        val busy by vm.busy.collectAsState()
 
         var tab by remember {
             mutableIntStateOf(0)
         }
 
         Scaffold(
-
-            modifier =
-                Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
 
             bottomBar = {
-
                 NavigationBar {
 
                     listOf(
@@ -110,10 +97,9 @@ private fun App(
         ) { innerPadding ->
 
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(innerPadding)
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
             ) {
 
                 when (tab) {
@@ -121,18 +107,15 @@ private fun App(
                     0 -> DashboardScreen(
                         assets = assets,
                         prices = prices,
-                        onRefresh =
-                            vm::refreshPrices,
+                        onRefresh = vm::refreshPrices,
                         busy = busy
                     )
 
                     1 -> AssetsScreen(
                         assets = assets,
                         onAdd = vm::addAsset,
-                        onDelete =
-                            vm::deleteAsset,
-                        onUpdate =
-                            vm::updateAsset
+                        onDelete = vm::deleteAsset,
+                        onUpdate = vm::updateAsset
                     )
 
                     2 -> AnalysisScreen(
@@ -142,8 +125,7 @@ private fun App(
                     3 -> ProfitLossScreen(
                         assets = assets,
                         history = history,
-                        onRecord =
-                            vm::recordProfitLossSnapshot
+                        onRecord = vm::recordProfitLossSnapshot
                     )
 
                     4 -> SettingsScreen(
