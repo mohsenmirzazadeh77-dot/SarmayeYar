@@ -1,5 +1,6 @@
 package com.sarmayeyar.app.ui
 
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -8,237 +9,334 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.sarmayeyar.app.model.Asset
 import com.sarmayeyar.app.util.Formatters
+import kotlin.math.PI
 
 @Composable
 fun AnalysisScreen(
     assets: List<Asset>
 ) {
-    val total = assets.sumOf { it.currentValue }
 
-    /*
-     * گروه‌بندی دارایی‌ها بر اساس عنوان اصلی
-     */
-    val groups = assets
-        .groupBy { it.type }
-        .map { (type, items) ->
-            val value = items.sumOf { it.currentValue }
-
-            AnalysisGroup(
-                type = type,
-                value = value,
-                count = items.size
-            )
+    val total =
+        assets.sumOf {
+            it.currentValue
         }
-        .sortedByDescending { it.value }
 
-    LazyColumn(
-        modifier = Modifier
-            .fillMaxSize()
-            .padding(16.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+    Column(
+        modifier =
+            Modifier
+                .fillMaxSize()
+                .padding(16.dp)
     ) {
 
-        item {
+        Text(
+            "تحلیل سرمایه",
+            style =
+                MaterialTheme.typography.headlineMedium
+        )
+
+        Spacer(
+            Modifier.height(12.dp)
+        )
+
+        if (assets.isEmpty()) {
+
             Text(
-                text = "تحلیل سرمایه",
-                style = MaterialTheme.typography.headlineMedium
+                "برای تحلیل، ابتدا دارایی ثبت کنید."
             )
 
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
-
-            Text(
-                text = "تفکیک سرمایه بر اساس نوع دارایی",
-                style = MaterialTheme.typography.bodyMedium
-            )
+            return
         }
 
-        item {
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                colors = CardDefaults.cardColors(
-                    containerColor =
-                        MaterialTheme.colorScheme.primaryContainer
-                )
+        /*
+         * =====================================================
+         * نمودار دایره‌ای ترکیب سبد
+         * =====================================================
+         */
+
+        Card(
+            modifier =
+                Modifier.fillMaxWidth()
+        ) {
+
+            Column(
+                modifier =
+                    Modifier.padding(16.dp)
             ) {
-                Column(
-                    modifier = Modifier.padding(16.dp)
+
+                Text(
+                    "ترکیب سبد سرمایه",
+                    style =
+                        MaterialTheme.typography.titleLarge
+                )
+
+                Spacer(
+                    Modifier.height(12.dp)
+                )
+
+                PortfolioPieChart(
+                    assets = assets,
+                    total = total
+                )
+
+                Spacer(
+                    Modifier.height(12.dp)
+                )
+
+                Text(
+                    "ارزش کل سرمایه: ${
+                        Formatters.toman(total)
+                    }"
+                )
+            }
+        }
+
+        Spacer(
+            Modifier.height(16.dp)
+        )
+
+        Text(
+            "جزئیات دارایی‌ها",
+            style =
+                MaterialTheme.typography.titleLarge
+        )
+
+        Spacer(
+            Modifier.height(8.dp)
+        )
+
+        assets.forEach { asset ->
+
+            val share =
+                if (total > 0L) {
+                    asset.currentValue *
+                            100.0 /
+                            total
+                } else {
+                    0.0
+                }
+
+            Card(
+                modifier =
+                    Modifier
+                        .fillMaxWidth()
+                        .padding(
+                            vertical = 4.dp
+                        )
+            ) {
+
+                Row(
+                    modifier =
+                        Modifier
+                            .fillMaxWidth()
+                            .padding(16.dp),
+                    horizontalArrangement =
+                        Arrangement.SpaceBetween
                 ) {
 
-                    Text(
-                        text = "ارزش کل سرمایه",
-                        style =
-                            MaterialTheme.typography.titleMedium
-                    )
+                    Column {
 
-                    Spacer(
-                        modifier = Modifier.height(6.dp)
-                    )
+                        Text(
+                            asset.name,
+                            style =
+                                MaterialTheme.typography.titleMedium
+                        )
 
-                    Text(
-                        text = Formatters.toman(total),
-                        style =
-                            MaterialTheme.typography.headlineSmall
-                    )
-
-                    Spacer(
-                        modifier = Modifier.height(4.dp)
-                    )
-
-                    Text(
-                        text =
-                            "تعداد گروه‌ها: ${groups.size}"
-                    )
-                }
-            }
-        }
-
-        if (groups.isEmpty()) {
-
-            item {
-                Text(
-                    text =
-                        "برای تحلیل، ابتدا دارایی ثبت کنید."
-                )
-            }
-
-        } else {
-
-            items(
-                items = groups,
-                key = { it.type }
-            ) { group ->
-
-                val share =
-                    if (total > 0) {
-                        group.value * 100.0 / total
-                    } else {
-                        0.0
+                        Text(
+                            asset.type
+                        )
                     }
 
-                AnalysisCard(
-                    group = group,
-                    share = share
-                )
+                    Column {
+
+                        Text(
+                            Formatters.toman(
+                                asset.currentValue
+                            )
+                        )
+
+                        Text(
+                            "سهم: ${
+                                Formatters.percent(
+                                    share
+                                )
+                            }"
+                        )
+                    }
+                }
             }
         }
     }
 }
 
-private data class AnalysisGroup(
-    val type: String,
-    val value: Long,
-    val count: Int
-)
-
 @Composable
-private fun AnalysisCard(
-    group: AnalysisGroup,
-    share: Double
+private fun PortfolioPieChart(
+    assets: List<Asset>,
+    total: Long
 ) {
 
-    Card(
-        modifier = Modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(
-            containerColor =
-                analysisCardColor(group.type)
+    val palette =
+        listOf(
+            Color(0xFFD4AF37),
+            Color(0xFF4CAF50),
+            Color(0xFF2196F3),
+            Color(0xFF9C27B0),
+            Color(0xFFFF9800),
+            Color(0xFF009688),
+            Color(0xFF795548),
+            Color(0xFF607D8B),
+            Color(0xFFE91E63)
         )
+
+    val slices =
+        assets.mapIndexed { index, asset ->
+
+            val share =
+                if (total > 0L) {
+                    asset.currentValue.toFloat() /
+                            total.toFloat()
+                } else {
+                    0f
+                }
+
+            PieSlice(
+                name = asset.name,
+                share = share,
+                color =
+                    palette[
+                        index % palette.size
+                    ]
+            )
+        }
+
+    Canvas(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(260.dp)
     ) {
 
-        Column(
-            modifier = Modifier.padding(16.dp)
-        ) {
+        val diameter =
+            minOf(
+                size.width,
+                size.height
+            ) * 0.72f
+
+        val topLeft =
+            Offset(
+                x = (size.width - diameter) / 2f,
+                y = (size.height - diameter) / 2f
+            )
+
+        var startAngle =
+            -90f
+
+        slices.forEach { slice ->
+
+            val sweep =
+                slice.share * 360f
+
+            drawArc(
+                color = slice.color,
+                startAngle = startAngle,
+                sweepAngle = sweep,
+                useCenter = true,
+                topLeft = topLeft,
+                size =
+                    androidx.compose.ui.geometry.Size(
+                        diameter,
+                        diameter
+                    )
+            )
+
+            startAngle += sweep
+        }
+
+        /*
+         * حاشیه دایره برای ظاهر مرتب‌تر
+         */
+        drawArc(
+            color =
+                MaterialTheme.colorScheme
+                    .onSurface
+                    .copy(alpha = 0.15f),
+            startAngle = 0f,
+            sweepAngle = 360f,
+            useCenter = false,
+            topLeft = topLeft,
+            size =
+                androidx.compose.ui.geometry.Size(
+                    diameter,
+                    diameter
+                ),
+            style =
+                Stroke(width = 2f)
+        )
+    }
+
+    Spacer(
+        Modifier.height(8.dp)
+    )
+
+    /*
+     * راهنمای رنگ‌ها
+     */
+    Column(
+        verticalArrangement =
+            Arrangement.spacedBy(6.dp)
+    ) {
+
+        slices.forEach { slice ->
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier =
+                    Modifier.fillMaxWidth(),
                 horizontalArrangement =
                     Arrangement.SpaceBetween
             ) {
 
-                Text(
-                    text = group.type,
-                    style =
-                        MaterialTheme.typography.titleMedium
-                )
+                Row {
+
+                    Canvas(
+                        modifier =
+                            Modifier
+                                .padding(end = 8.dp)
+                                .height(14.dp)
+                                .fillMaxWidth(0.04f)
+                    ) {
+
+                        drawRect(
+                            color = slice.color
+                        )
+                    }
+
+                    Text(
+                        slice.name
+                    )
+                }
 
                 Text(
-                    text =
-                        Formatters.percent(share),
-                    style =
-                        MaterialTheme.typography.titleMedium
+                    Formatters.percent(
+                        slice.share * 100.0
+                    )
                 )
             }
-
-            Spacer(
-                modifier = Modifier.height(8.dp)
-            )
-
-            Text(
-                text =
-                    Formatters.toman(group.value),
-                style =
-                    MaterialTheme.typography.headlineSmall
-            )
-
-            Spacer(
-                modifier = Modifier.height(4.dp)
-            )
-
-            Text(
-                text =
-                    "${group.count} دارایی ثبت‌شده"
-            )
         }
     }
 }
 
-private fun analysisCardColor(
-    type: String
-): Color {
-
-    return when (type) {
-
-        "طلا" ->
-            Color(0xFFFFF3CD)
-
-        "نقره" ->
-            Color(0xFFE5E7EB)
-
-        "مس" ->
-            Color(0xFFF1D0BD)
-
-        "تتر" ->
-            Color(0xFFE9D5FF)
-
-        "بورس" ->
-            Color(0xFFDCEBFF)
-
-        "درآمد ثابت" ->
-            Color(0xFFDDF4E4)
-
-        "نقد" ->
-            Color(0xFFF3F4F6)
-
-        "ارز" ->
-            Color(0xFFE8EEF5)
-
-        "سایر" ->
-            Color.White
-
-        else ->
-            Color(0xFFF5F5F5)
-    }
-}
+private data class PieSlice(
+    val name: String,
+    val share: Float,
+    val color: Color
+)
