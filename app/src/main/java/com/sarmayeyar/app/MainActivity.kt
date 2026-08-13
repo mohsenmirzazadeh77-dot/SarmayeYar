@@ -23,7 +23,6 @@ import com.sarmayeyar.app.ui.AssetsScreen
 import com.sarmayeyar.app.ui.DashboardScreen
 import com.sarmayeyar.app.ui.ProfitLossScreen
 import com.sarmayeyar.app.ui.SarmayeYarTheme
-import com.sarmayeyar.app.ui.ScenarioScreen
 import com.sarmayeyar.app.ui.SettingsScreen
 import com.sarmayeyar.app.viewmodel.MainViewModel
 
@@ -37,9 +36,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-
             SarmayeYarTheme {
-
                 App(vm)
             }
         }
@@ -50,31 +47,19 @@ class MainActivity : ComponentActivity() {
 private fun App(
     vm: MainViewModel
 ) {
+    val assets by vm.assets.collectAsState()
+    val history by vm.history.collectAsState()
+    val prices by vm.prices.collectAsState()
+    val busy by vm.busy.collectAsState()
 
-    val assets by
-        vm.assets.collectAsState()
-
-    val history by
-        vm.history.collectAsState()
-
-    val prices by
-        vm.prices.collectAsState()
-
-    val busy by
-        vm.busy.collectAsState()
-
-    var tab by
-        remember {
-            mutableIntStateOf(0)
-        }
+    var tab by remember {
+        mutableIntStateOf(0)
+    }
 
     Scaffold(
-
-        modifier =
-            Modifier.fillMaxSize(),
+        modifier = Modifier.fillMaxSize(),
 
         bottomBar = {
-
             NavigationBar {
 
                 listOf(
@@ -82,14 +67,11 @@ private fun App(
                     "دارایی‌ها",
                     "تحلیل",
                     "سود/زیان",
-                    "سناریو",
                     "تنظیمات"
                 ).forEachIndexed { i, label ->
 
                     NavigationBarItem(
-
-                        selected =
-                            tab == i,
+                        selected = tab == i,
 
                         onClick = {
                             tab = i
@@ -108,76 +90,43 @@ private fun App(
     ) { innerPadding ->
 
         Box(
-
-            modifier =
-                Modifier
-                    .fillMaxSize()
-                    .padding(
-                        innerPadding
-                    )
+            modifier = Modifier
+                .fillMaxSize()
+                .padding(innerPadding)
         ) {
 
             when (tab) {
 
-                /*
-                 * داشبورد
-                 */
+                // داشبورد
                 0 -> DashboardScreen(
                     assets = assets,
                     prices = prices,
-                    onRefresh =
-                        vm::refreshPrices,
+                    onRefresh = vm::refreshPrices,
                     busy = busy
                 )
 
-                /*
-                 * دارایی‌ها
-                 */
+                // دارایی‌ها
                 1 -> AssetsScreen(
-
                     assets = assets,
-
-                    onAdd =
-                        vm::addAsset,
-
-                    onDelete =
-                        vm::deleteAsset,
-
-                    onUpdate =
-                        vm::updateAsset
+                    onAdd = vm::addAsset,
+                    onDelete = vm::deleteAsset,
+                    onUpdate = vm::updateAsset
                 )
 
-                /*
-                 * تحلیل
-                 */
+                // تحلیل
                 2 -> AnalysisScreen(
                     assets = assets
                 )
 
-                /*
-                 * سود/زیان
-                 */
+                // سود/زیان
                 3 -> ProfitLossScreen(
-
                     assets = assets,
-
                     history = history,
-
-                    onRecord =
-                        vm::recordProfitLossSnapshot
+                    onRecord = vm::recordProfitLossSnapshot
                 )
 
-                /*
-                 * سناریو
-                 */
-                4 -> ScenarioScreen(
-                    assets = assets
-                )
-
-                /*
-                 * تنظیمات
-                 */
-                else -> SettingsScreen(
+                // تنظیمات
+                4 -> SettingsScreen(
                     vm::backup
                 )
             }
