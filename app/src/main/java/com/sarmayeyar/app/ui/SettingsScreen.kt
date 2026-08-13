@@ -9,12 +9,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
-import androidx.compose.material3.Button
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -22,7 +21,9 @@ import androidx.compose.ui.unit.dp
 
 @Composable
 fun SettingsScreen(
-    onBackup: () -> String
+    onBackup: () -> String,
+    darkMode: Boolean,
+    onDarkModeChange: (Boolean) -> Unit
 ) {
     val context = LocalContext.current
 
@@ -43,23 +44,11 @@ fun SettingsScreen(
         ) {
             Column(
                 modifier = Modifier.padding(16.dp),
-                verticalArrangement =
-                    Arrangement.spacedBy(6.dp)
+                verticalArrangement = Arrangement.spacedBy(6.dp)
             ) {
-
-                Text(
-                    text = "واحد پول: تومان"
-                )
-
-                Text(
-                    text =
-                        "نمایش: ارزش ریالی / تعداد واحد"
-                )
-
-                Text(
-                    text =
-                        "حالت امنیتی: بدون قفل"
-                )
+                Text("واحد پول: تومان")
+                Text("نمایش: ارزش ریالی / تعداد واحد")
+                Text("حالت امنیتی: بدون قفل")
             }
         }
 
@@ -72,8 +61,7 @@ fun SettingsScreen(
 
                 Text(
                     text = "ظاهر برنامه",
-                    style =
-                        MaterialTheme.typography.titleMedium
+                    style = MaterialTheme.typography.titleMedium
                 )
 
                 Spacer(
@@ -89,24 +77,20 @@ fun SettingsScreen(
                     Column(
                         modifier = Modifier.weight(1f)
                     ) {
-                        Text(
-                            text = "حالت تاریک"
-                        )
+                        Text("حالت تاریک")
 
                         Text(
-                            text =
-                                "تغییر ظاهر برنامه به حالت تاریک"
+                            if (darkMode) {
+                                "حالت تاریک فعال است"
+                            } else {
+                                "حالت روشن فعال است"
+                            }
                         )
                     }
 
                     Switch(
-                        checked = false,
-                        onCheckedChange = {
-                            /*
-                             * کنترل اصلی حالت تاریک
-                             * در Theme مدیریت می‌شود.
-                             */
-                        }
+                        checked = darkMode,
+                        onCheckedChange = onDarkModeChange
                     )
                 }
             }
@@ -116,14 +100,15 @@ fun SettingsScreen(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
 
-                val text = onBackup()
+                val backupText = onBackup()
 
                 val intent =
                     Intent(Intent.ACTION_SEND).apply {
                         type = "application/json"
+
                         putExtra(
                             Intent.EXTRA_TEXT,
-                            text
+                            backupText
                         )
                     }
 
@@ -144,8 +129,7 @@ fun SettingsScreen(
 
         Text(
             text = "SarmayeYar",
-            style =
-                MaterialTheme.typography.titleMedium
+            style = MaterialTheme.typography.titleMedium
         )
 
         Text(
