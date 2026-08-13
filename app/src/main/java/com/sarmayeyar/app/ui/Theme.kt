@@ -5,10 +5,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
 import androidx.compose.ui.graphics.Color
 
 private val LightColors = lightColorScheme(
@@ -54,7 +50,7 @@ private val DarkColors = darkColorScheme(
 private const val PREFS_NAME = "sarmayeyar_theme"
 private const val DARK_MODE_KEY = "dark_mode"
 
-private fun loadDarkMode(context: Context): Boolean {
+fun loadDarkMode(context: Context): Boolean {
     return context
         .getSharedPreferences(
             PREFS_NAME,
@@ -85,16 +81,9 @@ fun saveDarkMode(
 
 @Composable
 fun SarmayeYarTheme(
+    darkMode: Boolean,
     content: @Composable () -> Unit
 ) {
-    val context = androidx.compose.ui.platform.LocalContext.current
-
-    var darkMode by remember {
-        mutableStateOf(
-            loadDarkMode(context)
-        )
-    }
-
     MaterialTheme(
         colorScheme =
             if (darkMode) {
