@@ -53,50 +53,33 @@ class PriceService {
                     "Mozilla/5.0"
                 )
 
-                val requestBody =
-                    """{"srcCurrency":"usdt","dstCurrency":"rls"}"""
-
-                conn.outputStream.use { output ->
-                    output.write(
-                        requestBody.toByteArray(Charsets.UTF_8)
+                conn.outputStream.use {
+                    it.write(
+                        """{"srcCurrency":"usdt","dstCurrency":"rls"}"""
+                            .toByteArray(Charsets.UTF_8)
                     )
-                    output.flush()
                 }
 
-                val responseCode = conn.responseCode
-
-                if (responseCode !in 200..299) {
+                if (conn.responseCode !in 200..299) {
                     return@runCatching null
                 }
 
-                val response = conn.inputStream
+                val text = conn.inputStream
                     .bufferedReader(Charsets.UTF_8)
                     .use { it.readText() }
 
-                val root = JSONObject(response)
-
-                val stats = root.optJSONObject("stats")
-                    ?: return@runCatching null
-
-                val market = stats.optJSONObject("usdt-rls")
-                    ?: return@runCatching null
-
-                val latestText =
-                    market.optString("latest", "")
-
-                val latest = latestText
-                    .replace(",", "")
-                    .toDoubleOrNull()
+                val latest = JSONObject(text)
+                    .optJSONObject("stats")
+                    ?.optJSONObject("usdt-rls")
+                    ?.optString("latest")
+                    ?.replace(",", "")
+                    ?.toDoubleOrNull()
                     ?: return@runCatching null
 
                 if (latest <= 0) {
                     return@runCatching null
                 }
 
-                /*
-                 * نوبیتکس قیمت را به ریال می‌دهد.
-                 * سرمایه‌یار قیمت را به تومان نگهداری می‌کند.
-                 */
                 (latest / 10.0).toLong()
 
             } finally {
@@ -122,7 +105,7 @@ class PriceService {
 
                 conn.setRequestProperty(
                     "User-Agent",
-                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+                    "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/131.0 Safari/537.36"
                 )
 
                 conn.setRequestProperty(
@@ -132,12 +115,10 @@ class PriceService {
 
                 conn.setRequestProperty(
                     "Accept-Language",
-                    "fa-IR,fa;q=0.9,en;q=0.8"
+                    "fa-IR,fa;q=0.9,en-US;q=0.8,en;q=0.7"
                 )
 
-                val responseCode = conn.responseCode
-
-                if (responseCode !in 200..299) {
+                if (conn.responseCode !in 200..299) {
                     return@runCatching null
                 }
 
@@ -146,58 +127,91 @@ class PriceService {
                     .use { it.readText() }
 
                 /*
-                 * الگوهای مختلف برای مقاومت بیشتر
-                 * در برابر تغییر جزئی HTML سایت.
+                 * ابتدا الگوهای مربوط به ساختار صفحه را بررسی می‌کنیم.
                  */
                 val patterns = listOf(
 
                     Pattern.compile(
-                        """نرخ فعلی[^0-9]{0,150}([0-9,]{6,})"""
+                        """data-field="price"[^>]*>\s*([0-9,٬]+)"""
                     ),
 
                     Pattern.compile(
-                        """قیمت[^0-9]{0,100}([0-9,]{6,})"""
+                        """data-field=['"]price['"][^>]*>.*?([0-9,٬]{7,})"""
                     ),
 
                     Pattern.compile(
-                        """"last_price"[^0-9]{0,50}([0-9,]{6,})"""
+                        """class="[^"]*price[^"]*"[^>]*>.*?([0-9,٬]{7,})"""
                     ),
 
                     Pattern.compile(
-                        """"price"[^0-9]{0,50}([0-9,]{6,})"""
+                        """نرخ فعلی[^0-9]{0,150}([0-9,٬]{7,})"""
+                    ),
+
+                    Pattern.compile(
+                        """قیمت[^0-9]{0,100}([0-9,٬]{7,})"""
                     )
                 )
 
-                val rialText =
-                    patterns.asSequence()
-                        .map { pattern ->
-                            pattern.matcher(html)
-                        }
-                        .firstNotNullOfOrNull { matcher ->
-                            if (matcher.find()) {
-                                matcher.group(1)
-                            } else {
-                                null
-                            }
-                        }
-                        ?: return@runCatching null
+                var rial: Long? = null
 
-                val rial = rialText
-                    .replace(",", "")
-                    .replace("٬", "")
-                    .trim()
-                    .toLongOrNull()
-                    ?: return@runCatching null
+                for (pattern in patterns) {
+                    val matcher = pattern.matcher(html)
 
-                if (rial <= 0) {
-                    return@runCatching null
+                    if (matcher.find()) {
+                        val value = matcher.group(1)
+                            ?.replace(",", "")
+                            ?.replace("٬", "")
+                            ?.trim()
+                            ?.toLongOrNull()
+
+                        if (value != null && value > 0) {
+                            rial = value
+                            break
+                        }
+                    }
                 }
 
                 /*
-                 * TGJU قیمت را به ریال اعلام می‌کند.
-                 * تبدیل ریال به تومان.
+                 * اگر الگوهای بالا جواب ندادند،
+                 * تمام اعداد بزرگ موجود در HTML بررسی می‌شوند.
                  */
-                rial / 10L
+                if (rial == null) {
+
+                    val numberPattern = Pattern.compile(
+                        """(?<!\d)([0-9]{7,12})(?!\d)"""
+                    )
+
+                    val matcher =
+                        numberPattern.matcher(html)
+
+                    while (matcher.find()) {
+
+                        val value =
+                            matcher.group(1)
+                                ?.toLongOrNull()
+
+                        /*
+                         * قیمت طلای ۱۸ باید در محدوده
+                         * منطقی قیمت هر گرم باشد.
+                         */
+                        if (
+                            value != null &&
+                            value in 10_000_000L..2_000_000_000L
+                        ) {
+                            rial = value
+                            break
+                        }
+                    }
+                }
+
+                val finalRial =
+                    rial ?: return@runCatching null
+
+                /*
+                 * TGJU قیمت را به ریال ارائه می‌کند.
+                 * سرمایه‌یار تومان نگهداری می‌کند.
+                 */
+                finalRial / 10L
 
             } finally {
                 conn.disconnect()
