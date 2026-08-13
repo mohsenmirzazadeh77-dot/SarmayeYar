@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -24,6 +25,8 @@ import com.sarmayeyar.app.ui.DashboardScreen
 import com.sarmayeyar.app.ui.HistoryScreen
 import com.sarmayeyar.app.ui.SarmayeYarTheme
 import com.sarmayeyar.app.ui.SettingsScreen
+import com.sarmayeyar.app.ui.loadDarkMode
+import com.sarmayeyar.app.ui.saveDarkMode
 import com.sarmayeyar.app.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -34,9 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            SarmayeYarTheme {
-                App(vm)
-            }
+            App(vm)
         }
     }
 }
@@ -44,80 +45,103 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun App(vm: MainViewModel) {
 
-    val assets by vm.assets.collectAsState()
-    val history by vm.history.collectAsState()
-    val prices by vm.prices.collectAsState()
-    val busy by vm.busy.collectAsState()
+    val context = androidx.compose.ui.platform.LocalContext.current
 
-    var tab by remember {
-        mutableIntStateOf(0)
+    var darkMode by remember {
+        mutableStateOf(
+            loadDarkMode(context)
+        )
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
+    SarmayeYarTheme(
+        darkMode = darkMode
+    ) {
 
-        bottomBar = {
-            NavigationBar {
+        val assets by vm.assets.collectAsState()
+        val history by vm.history.collectAsState()
+        val prices by vm.prices.collectAsState()
+        val busy by vm.busy.collectAsState()
 
-                listOf(
-                    "داشبورد",
-                    "دارایی‌ها",
-                    "تحلیل",
-                    "نمودار",
-                    "تنظیمات"
-                ).forEachIndexed { i, label ->
+        var tab by remember {
+            mutableIntStateOf(0)
+        }
 
-                    NavigationBarItem(
-                        selected = tab == i,
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
 
-                        onClick = {
-                            tab = i
-                        },
+            bottomBar = {
+                NavigationBar {
 
-                        icon = {},
+                    listOf(
+                        "داشبورد",
+                        "دارایی‌ها",
+                        "تحلیل",
+                        "نمودار",
+                        "تنظیمات"
+                    ).forEachIndexed { i, label ->
 
-                        label = {
-                            Text(label)
+                        NavigationBarItem(
+                            selected = tab == i,
+
+                            onClick = {
+                                tab = i
+                            },
+
+                            icon = {},
+
+                            label = {
+                                Text(label)
+                            }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+
+                when (tab) {
+
+                    0 -> DashboardScreen(
+                        assets = assets,
+                        prices = prices,
+                        onRefresh = vm::refreshPrices,
+                        busy = busy
+                    )
+
+                    1 -> AssetsScreen(
+                        assets = assets,
+                        onAdd = vm::addAsset,
+                        onDelete = vm::deleteAsset,
+                        onUpdate = vm::updateAsset
+                    )
+
+                    2 -> AnalysisScreen(
+                        assets = assets
+                    )
+
+                    3 -> HistoryScreen(
+                        history = history
+                    )
+
+                    4 -> SettingsScreen(
+                        onBackup = vm::backup,
+                        darkMode = darkMode,
+                        onDarkModeChange = { enabled ->
+
+                            darkMode = enabled
+
+                            saveDarkMode(
+                                context,
+                                enabled
+                            )
                         }
                     )
                 }
-            }
-        }
-    ) { innerPadding ->
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-
-            when (tab) {
-
-                0 -> DashboardScreen(
-                    assets = assets,
-                    prices = prices,
-                    onRefresh = vm::refreshPrices,
-                    busy = busy
-                )
-
-                1 -> AssetsScreen(
-                    assets = assets,
-                    onAdd = vm::addAsset,
-                    onDelete = vm::deleteAsset,
-                    onUpdate = vm::updateAsset
-                )
-
-                2 -> AnalysisScreen(
-                    assets = assets
-                )
-
-                3 -> HistoryScreen(
-                    history = history
-                )
-
-                4 -> SettingsScreen(
-                    onBackup = vm::backup
-                )
             }
         }
     }
