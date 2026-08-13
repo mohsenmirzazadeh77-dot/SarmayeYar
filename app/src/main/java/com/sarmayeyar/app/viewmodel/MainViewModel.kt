@@ -18,185 +18,233 @@ import kotlinx.coroutines.withContext
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
 
-    private val repo = InvestmentRepository(LocalStore(app))
-    private val priceService = PriceService()
+    private val repo =
+        InvestmentRepository(LocalStore(app))
 
-    private val _assets = MutableStateFlow(repo.assets())
-    val assets: StateFlow<List<Asset>> = _assets.asStateFlow()
+    private val priceService =
+        PriceService()
 
-    private val _history = MutableStateFlow(repo.history())
-    val history: StateFlow<List<HistoryPoint>> = _history.asStateFlow()
+    private val _assets =
+        MutableStateFlow(repo.assets())
 
-    private val _prices = MutableStateFlow(LivePrices())
-    val prices: StateFlow<LivePrices> = _prices.asStateFlow()
+    val assets: StateFlow<List<Asset>> =
+        _assets.asStateFlow()
 
-    private val _busy = MutableStateFlow(false)
-    val busy: StateFlow<Boolean> = _busy.asStateFlow()
+    private val _history =
+        MutableStateFlow(repo.history())
 
-    private val _message = MutableStateFlow<String?>(null)
-    val message: StateFlow<String?> = _message.asStateFlow()
+    val history: StateFlow<List<HistoryPoint>> =
+        _history.asStateFlow()
+
+    private val _prices =
+        MutableStateFlow(LivePrices())
+
+    val prices: StateFlow<LivePrices> =
+        _prices.asStateFlow()
+
+    private val _busy =
+        MutableStateFlow(false)
+
+    val busy: StateFlow<Boolean> =
+        _busy.asStateFlow()
+
+    private val _message =
+        MutableStateFlow<String?>(null)
+
+    val message: StateFlow<String?> =
+        _message.asStateFlow()
 
     fun addAsset(asset: Asset) {
-        val next = _assets.value + asset.copy(
-            id = System.currentTimeMillis()
-        )
+
+        val next =
+            _assets.value +
+                    asset.copy(
+                        id = System.currentTimeMillis()
+                    )
 
         _assets.value = next
+
         repo.saveAssets(next)
+
+        snapshot()
     }
 
     fun deleteAsset(asset: Asset) {
-        val next = _assets.value.filterNot {
-            it.id == asset.id
-        }
+
+        val next =
+            _assets.value.filterNot {
+                it.id == asset.id
+            }
 
         _assets.value = next
+
         repo.saveAssets(next)
+
+        snapshot()
     }
 
     fun updateAsset(asset: Asset) {
-        val next = _assets.value.map {
-            if (it.id == asset.id) asset else it
-        }
+
+        val next =
+            _assets.value.map {
+                if (it.id == asset.id) {
+                    asset
+                } else {
+                    it
+                }
+            }
 
         _assets.value = next
+
         repo.saveAssets(next)
+
+        snapshot()
     }
 
     fun refreshPrices() {
+
         viewModelScope.launch {
 
             _busy.value = true
 
-            val result = withContext(Dispatchers.IO) {
-                priceService.fetch()
-            }
+            _message.value =
+                "در حال دریافت قیمت تتر و طلا..."
+
+            val result =
+                withContext(Dispatchers.IO) {
+                    priceService.fetch()
+                }
 
             _prices.value = result
 
-            if (
-                result.usdtToman == null &&
-                result.gold18TomanPerGram == null
-            ) {
-                _message.value =
-                    "دریافت قیمت آنلاین ناموفق بود."
-            } else {
-                _message.value =
-                    "قیمت‌های آنلاین به‌روزرسانی شدند."
-            }
+            /*
+             * تشخیص وضعیت دریافت قیمت‌ها
+             */
+
+            val usdtOk =
+                result.usdtToman != null &&
+                        result.usdtToman > 0
+
+            val goldOk =
+                result.gold18TomanPerGram != null &&
+                        result.gold18TomanPerGram > 0
+
+            _message.value =
+                when {
+
+                    usdtOk && goldOk -> {
+                        "تتر و طلای ۱۸ عیار با موفقیت به‌روزرسانی شدند."
+                    }
+
+                    usdtOk && !goldOk -> {
+                        "تتر با موفقیت دریافت شد؛ " +
+                                "اما قیمت طلای ۱۸ عیار دریافت نشد."
+                    }
+
+                    !usdtOk && goldOk -> {
+                        "قیمت طلا دریافت شد؛ " +
+                                "اما تتر دریافت نشد."
+                    }
+
+                    else -> {
+                        "دریافت قیمت تتر و طلا ناموفق بود."
+                    }
+                }
+
+            /*
+             * قیمت‌های آنلاین روی دارایی‌ها اعمال می‌شوند.
+             */
+
+            applyLivePrices(result)
 
             _busy.value = false
         }
     }
 
-    /*
-     * ارزش رسمی سرمایه.
-     *
-     * این مقدار فقط از ارزش ثبت‌شده دارایی‌ها استفاده می‌کند
-     * و به قیمت آنلاین وابسته نیست.
-     */
-    fun totalRegisteredValue(): Long {
-        return _assets.value.sumOf {
-            it.currentValue
-        }
-    }
+    private fun applyLivePrices(
+        p: LivePrices
+    ) {
 
-    /*
-     * ارزش لحظه‌ای سرمایه.
-     *
-     * این مقدار صرفاً برای نمایش وضعیت لحظه‌ای کاربر است
-     * و نباید جایگزین ارزش رسمی سرمایه شود.
-     */
-    fun totalLiveValue(): Long {
+        val next =
+            _assets.value.map { asset ->
 
-        return _assets.value.sumOf { asset ->
+                when (asset.type) {
 
-            when (asset.type) {
+                    "تتر" -> {
 
-                "تتر" -> {
-                    val price = _prices.value.usdtToman
+                        p.usdtToman?.let { price ->
 
-                    if (price != null) {
-                        (asset.amount * price).toLong()
-                    } else {
-                        asset.currentValue
+                            asset.copy(
+                                currentPriceToman = price,
+                                isLivePrice = true
+                            )
+
+                        } ?: asset
                     }
-                }
 
-                "طلا" -> {
-                    val price =
-                        _prices.value.gold18TomanPerGram
+                    "طلا" -> {
 
-                    if (price != null) {
-                        (asset.amount * price).toLong()
-                    } else {
-                        asset.currentValue
+                        p.gold18TomanPerGram?.let { price ->
+
+                            asset.copy(
+                                currentPriceToman = price,
+                                isLivePrice = true
+                            )
+
+                        } ?: asset
                     }
-                }
 
-                else -> {
-                    asset.currentValue
+                    else -> asset
                 }
             }
-        }
+
+        _assets.value = next
+
+        repo.saveAssets(next)
+
+        snapshot()
     }
 
-    /*
-     * ثبت دستی Snapshot سود و زیان.
-     *
-     * این تابع فقط با دستور مستقیم کاربر اجرا می‌شود.
-     */
-    fun recordProfitLossSnapshot() {
+    private fun snapshot() {
 
-        val total = totalRegisteredValue()
+        val total =
+            _assets.value.sumOf {
+                it.currentValue
+            }
 
         if (total <= 0L) {
-            _message.value =
-                "ارزش کل سرمایه برای ثبت سود/زیان معتبر نیست."
             return
         }
 
-        /*
-         * ارزش هر عنوان دارایی در زمان ثبت.
-         *
-         * این مقادیر از ارزش رسمی ثبت‌شده دارایی‌ها
-         * گرفته می‌شوند و قیمت آنلاین در آنها دخالت ندارد.
-         */
-        val categoryValues =
-            _assets.value
-                .groupBy { it.type }
-                .mapValues { (_, categoryAssets) ->
-                    categoryAssets.sumOf { it.currentValue }
-                }
+        val h =
+            (
+                _history.value +
+                        HistoryPoint(
+                            System.currentTimeMillis(),
+                            total
+                        )
+                ).takeLast(365)
 
-        val point = HistoryPoint(
-            timestamp = System.currentTimeMillis(),
-            totalToman = total,
-            categoryValues = categoryValues
-        )
+        _history.value = h
 
-        val nextHistory =
-            (_history.value + point).takeLast(365)
-
-        _history.value = nextHistory
-        repo.saveHistory(nextHistory)
-
-        _message.value =
-            "ثبت سود/زیان با موفقیت انجام شد."
+        repo.saveHistory(h)
     }
 
     fun clearMessage() {
         _message.value = null
     }
 
-    fun backup(): String {
-        return repo.backup()
-    }
+    fun backup(): String =
+        repo.backup()
 
     fun restore(json: String) {
+
         repo.restore(json)
 
-        _assets.value = repo.assets()
-        _history.value = repo.history()
+        _assets.value =
+            repo.assets()
+
+        _history.value =
+            repo.history()
     }
 }
