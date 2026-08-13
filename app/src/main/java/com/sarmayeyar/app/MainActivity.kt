@@ -4,13 +4,17 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.viewModels
+import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.darkColorScheme
+import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -23,7 +27,6 @@ import com.sarmayeyar.app.ui.AnalysisScreen
 import com.sarmayeyar.app.ui.AssetsScreen
 import com.sarmayeyar.app.ui.DashboardScreen
 import com.sarmayeyar.app.ui.ProfitLossScreen
-import com.sarmayeyar.app.ui.SarmayeYarTheme
 import com.sarmayeyar.app.ui.SettingsScreen
 import com.sarmayeyar.app.viewmodel.MainViewModel
 
@@ -44,14 +47,18 @@ class MainActivity : ComponentActivity() {
 private fun App(vm: MainViewModel) {
 
     var darkMode by remember {
-        mutableStateOf(false)
+        mutableStateOf(isSystemInDarkTheme())
     }
 
-    SarmayeYarTheme(
-        darkMode = darkMode,
-        onDarkModeChange = {
-            darkMode = it
+    val colorScheme =
+        if (darkMode) {
+            darkColorScheme()
+        } else {
+            lightColorScheme()
         }
+
+    MaterialTheme(
+        colorScheme = colorScheme
     ) {
 
         val assets by vm.assets.collectAsState()
@@ -75,13 +82,13 @@ private fun App(vm: MainViewModel) {
                         "تحلیل",
                         "سود/زیان",
                         "تنظیمات"
-                    ).forEachIndexed { i, label ->
+                    ).forEachIndexed { index, label ->
 
                         NavigationBarItem(
-                            selected = tab == i,
+                            selected = tab == index,
 
                             onClick = {
-                                tab = i
+                                tab = index
                             },
 
                             icon = {},
@@ -125,13 +132,14 @@ private fun App(vm: MainViewModel) {
                     3 -> ProfitLossScreen(
                         assets = assets,
                         history = history,
-                        onRecord = vm::recordProfitLossSnapshot
+                        onRecord =
+                            vm::recordProfitLossSnapshot
                     )
 
                     4 -> SettingsScreen(
                         darkMode = darkMode,
-                        onDarkModeChange = {
-                            darkMode = it
+                        onDarkModeChange = { newValue ->
+                            darkMode = newValue
                         },
                         onBackup = vm::backup
                     )
