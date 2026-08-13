@@ -71,7 +71,10 @@ fun AssetsScreen(
             ) { asset ->
 
                 Card(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = androidx.compose.material3.CardDefaults.cardColors(
+                        containerColor = assetCardColor(asset.type)
+                    )
                 ) {
                     Row(
                         Modifier
@@ -95,7 +98,6 @@ fun AssetsScreen(
 
                             Text(
                                 Formatters.toman(asset.currentValue),
-                                color = assetColor(asset.type),
                                 style = MaterialTheme.typography.titleMedium
                             )
                         }
@@ -193,6 +195,7 @@ private fun AssetDialog(
         "نقره",
         "تتر",
         "مس",
+        "درآمد ثابت",
         "سایر"
     )
 
@@ -354,15 +357,40 @@ private fun AssetDialog(
     )
 }
 
-private fun assetColor(type: String): Color {
+/*
+ * رنگ پس‌زمینه کادر هر دارایی
+ */
+private fun assetCardColor(type: String): Color {
     return when (type) {
-        "طلا" -> Color(0xFFFFC107)
-        "نقره" -> Color(0xFFB0BEC5)
-        "مس" -> Color(0xFFB87333)
-        "تتر" -> Color(0xFF7E57C2)
-        "بورس" -> Color(0xFF42A5F5)
-        "درآمد ثابت" -> Color(0xFF66BB6A)
-        "سایر" -> Color.White
-        else -> Color.Unspecified
+
+        "طلا" ->
+            Color(0xFFFFF3CD)
+
+        "نقره" ->
+            Color(0xFFE5E7EB)
+
+        "مس" ->
+            Color(0xFFF1D0BD)
+
+        "تتر" ->
+            Color(0xFFE9D5FF)
+
+        "بورس" ->
+            Color(0xFFDCEBFF)
+
+        "درآمد ثابت" ->
+            Color(0xFFDDF4E4)
+
+        "سایر" ->
+            Color.White
+
+        "نقد" ->
+            Color(0xFFF3F4F6)
+
+        "ارز" ->
+            Color(0xFFE8EEF5)
+
+        else ->
+            Color(0xFFF5F5F5)
     }
 }
