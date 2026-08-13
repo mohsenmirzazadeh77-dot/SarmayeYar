@@ -15,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -36,9 +37,7 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
 
         setContent {
-            SarmayeYarTheme {
-                App(vm)
-            }
+            App(vm)
         }
     }
 }
@@ -47,88 +46,114 @@ class MainActivity : ComponentActivity() {
 private fun App(
     vm: MainViewModel
 ) {
-    val assets by vm.assets.collectAsState()
-    val history by vm.history.collectAsState()
-    val prices by vm.prices.collectAsState()
-    val busy by vm.busy.collectAsState()
-
-    var tab by remember {
-        mutableIntStateOf(0)
+    var darkMode by remember {
+        mutableStateOf(false)
     }
 
-    Scaffold(
-        modifier = Modifier.fillMaxSize(),
+    SarmayeYarTheme(
+        darkMode = darkMode,
+        onDarkModeChange = {
+            darkMode = it
+        }
+    ) {
 
-        bottomBar = {
-            NavigationBar {
+        val assets by
+            vm.assets.collectAsState()
 
-                listOf(
-                    "داشبورد",
-                    "دارایی‌ها",
-                    "تحلیل",
-                    "سود/زیان",
-                    "تنظیمات"
-                ).forEachIndexed { i, label ->
+        val history by
+            vm.history.collectAsState()
 
-                    NavigationBarItem(
-                        selected = tab == i,
+        val prices by
+            vm.prices.collectAsState()
 
-                        onClick = {
-                            tab = i
-                        },
+        val busy by
+            vm.busy.collectAsState()
 
-                        icon = {},
-
-                        label = {
-                            Text(label)
-                        }
-                    )
-                }
-            }
+        var tab by remember {
+            mutableIntStateOf(0)
         }
 
-    ) { innerPadding ->
+        Scaffold(
 
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
+            modifier =
+                Modifier.fillMaxSize(),
 
-            when (tab) {
+            bottomBar = {
 
-                // داشبورد
-                0 -> DashboardScreen(
-                    assets = assets,
-                    prices = prices,
-                    onRefresh = vm::refreshPrices,
-                    busy = busy
-                )
+                NavigationBar {
 
-                // دارایی‌ها
-                1 -> AssetsScreen(
-                    assets = assets,
-                    onAdd = vm::addAsset,
-                    onDelete = vm::deleteAsset,
-                    onUpdate = vm::updateAsset
-                )
+                    listOf(
+                        "داشبورد",
+                        "دارایی‌ها",
+                        "تحلیل",
+                        "سود/زیان",
+                        "تنظیمات"
+                    ).forEachIndexed { i, label ->
 
-                // تحلیل
-                2 -> AnalysisScreen(
-                    assets = assets
-                )
+                        NavigationBarItem(
+                            selected = tab == i,
 
-                // سود/زیان
-                3 -> ProfitLossScreen(
-                    assets = assets,
-                    history = history,
-                    onRecord = vm::recordProfitLossSnapshot
-                )
+                            onClick = {
+                                tab = i
+                            },
 
-                // تنظیمات
-                4 -> SettingsScreen(
-                    vm::backup
-                )
+                            icon = {},
+
+                            label = {
+                                Text(label)
+                            }
+                        )
+                    }
+                }
+            }
+
+        ) { innerPadding ->
+
+            Box(
+                modifier =
+                    Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+            ) {
+
+                when (tab) {
+
+                    0 -> DashboardScreen(
+                        assets = assets,
+                        prices = prices,
+                        onRefresh =
+                            vm::refreshPrices,
+                        busy = busy
+                    )
+
+                    1 -> AssetsScreen(
+                        assets = assets,
+                        onAdd = vm::addAsset,
+                        onDelete =
+                            vm::deleteAsset,
+                        onUpdate =
+                            vm::updateAsset
+                    )
+
+                    2 -> AnalysisScreen(
+                        assets = assets
+                    )
+
+                    3 -> ProfitLossScreen(
+                        assets = assets,
+                        history = history,
+                        onRecord =
+                            vm::recordProfitLossSnapshot
+                    )
+
+                    4 -> SettingsScreen(
+                        darkMode = darkMode,
+                        onDarkModeChange = {
+                            darkMode = it
+                        },
+                        onBackup = vm::backup
+                    )
+                }
             }
         }
     }
