@@ -23,7 +23,6 @@ import com.sarmayeyar.app.ui.AssetsScreen
 import com.sarmayeyar.app.ui.DashboardScreen
 import com.sarmayeyar.app.ui.HistoryScreen
 import com.sarmayeyar.app.ui.SarmayeYarTheme
-import com.sarmayeyar.app.ui.ScenarioScreen
 import com.sarmayeyar.app.ui.SettingsScreen
 import com.sarmayeyar.app.viewmodel.MainViewModel
 
@@ -65,16 +64,18 @@ private fun App(vm: MainViewModel) {
                     "دارایی‌ها",
                     "تحلیل",
                     "نمودار",
-                    "سناریو",
                     "تنظیمات"
                 ).forEachIndexed { i, label ->
 
                     NavigationBarItem(
                         selected = tab == i,
+
                         onClick = {
                             tab = i
                         },
+
                         icon = {},
+
                         label = {
                             Text(label)
                         }
@@ -93,10 +94,10 @@ private fun App(vm: MainViewModel) {
             when (tab) {
 
                 0 -> DashboardScreen(
-                    assets,
-                    prices,
-                    vm::refreshPrices,
-                    busy
+                    assets = assets,
+                    prices = prices,
+                    onRefresh = vm::refreshPrices,
+                    busy = busy
                 )
 
                 1 -> AssetsScreen(
@@ -106,13 +107,17 @@ private fun App(vm: MainViewModel) {
                     onUpdate = vm::updateAsset
                 )
 
-                2 -> AnalysisScreen(assets)
+                2 -> AnalysisScreen(
+                    assets = assets
+                )
 
-                3 -> HistoryScreen(history)
+                3 -> HistoryScreen(
+                    history = history
+                )
 
-                4 -> ScenarioScreen(assets)
-
-                else -> SettingsScreen(vm::backup)
+                4 -> SettingsScreen(
+                    onBackup = vm::backup
+                )
             }
         }
     }
