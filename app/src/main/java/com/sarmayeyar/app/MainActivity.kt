@@ -2,8 +2,8 @@ package com.sarmayeyar.app
 
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.viewModels
 import androidx.activity.compose.setContent
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -19,6 +19,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import com.sarmayeyar.app.ui.AnalysisScreen
 import com.sarmayeyar.app.ui.AssetsScreen
 import com.sarmayeyar.app.ui.DashboardScreen
@@ -33,9 +34,7 @@ class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
 
-    override fun onCreate(
-        savedInstanceState: Bundle?
-    ) {
+    override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
         setContent {
@@ -48,8 +47,7 @@ class MainActivity : ComponentActivity() {
 private fun App(
     vm: MainViewModel
 ) {
-
-    val context = this@MainActivity
+    val context = LocalContext.current
 
     var darkMode by remember {
         mutableStateOf(
@@ -61,29 +59,19 @@ private fun App(
         darkMode = darkMode
     ) {
 
-        val assets by
-            vm.assets.collectAsState()
-
-        val history by
-            vm.history.collectAsState()
-
-        val prices by
-            vm.prices.collectAsState()
-
-        val busy by
-            vm.busy.collectAsState()
+        val assets by vm.assets.collectAsState()
+        val history by vm.history.collectAsState()
+        val prices by vm.prices.collectAsState()
+        val busy by vm.busy.collectAsState()
 
         var tab by remember {
             mutableIntStateOf(0)
         }
 
         Scaffold(
-
-            modifier =
-                Modifier.fillMaxSize(),
+            modifier = Modifier.fillMaxSize(),
 
             bottomBar = {
-
                 NavigationBar {
 
                     listOf(
@@ -95,9 +83,7 @@ private fun App(
                     ).forEachIndexed { index, label ->
 
                         NavigationBarItem(
-
-                            selected =
-                                tab == index,
+                            selected = tab == index,
 
                             onClick = {
                                 tab = index
@@ -116,12 +102,9 @@ private fun App(
         ) { innerPadding ->
 
             Box(
-                modifier =
-                    Modifier
-                        .fillMaxSize()
-                        .padding(
-                            innerPadding
-                        )
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
             ) {
 
                 when (tab) {
@@ -129,19 +112,15 @@ private fun App(
                     0 -> DashboardScreen(
                         assets = assets,
                         prices = prices,
-                        onRefresh =
-                            vm::refreshPrices,
+                        onRefresh = vm::refreshPrices,
                         busy = busy
                     )
 
                     1 -> AssetsScreen(
                         assets = assets,
-                        onAdd =
-                            vm::addAsset,
-                        onDelete =
-                            vm::deleteAsset,
-                        onUpdate =
-                            vm::updateAsset
+                        onAdd = vm::addAsset,
+                        onDelete = vm::deleteAsset,
+                        onUpdate = vm::updateAsset
                     )
 
                     2 -> AnalysisScreen(
@@ -151,8 +130,7 @@ private fun App(
                     3 -> ProfitLossScreen(
                         assets = assets,
                         history = history,
-                        onRecord =
-                            vm::recordProfitLossSnapshot
+                        onRecord = vm::recordProfitLossSnapshot
                     )
 
                     4 -> SettingsScreen(
@@ -168,8 +146,7 @@ private fun App(
                             )
                         },
 
-                        onBackup =
-                            vm::backup
+                        onBackup = vm::backup
                     )
                 }
             }
