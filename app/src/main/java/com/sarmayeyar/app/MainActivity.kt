@@ -15,133 +15,171 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import com.sarmayeyar.app.ui.AnalysisScreen
 import com.sarmayeyar.app.ui.AssetsScreen
 import com.sarmayeyar.app.ui.DashboardScreen
-import com.sarmayeyar.app.ui.HistoryScreen
+import com.sarmayeyar.app.ui.ProfitLossScreen
 import com.sarmayeyar.app.ui.SarmayeYarTheme
+import com.sarmayeyar.app.ui.ScenarioScreen
 import com.sarmayeyar.app.ui.SettingsScreen
-import com.sarmayeyar.app.ui.loadDarkMode
-import com.sarmayeyar.app.ui.saveDarkMode
 import com.sarmayeyar.app.viewmodel.MainViewModel
 
 class MainActivity : ComponentActivity() {
 
     private val vm: MainViewModel by viewModels()
 
-    override fun onCreate(savedInstanceState: Bundle?) {
+    override fun onCreate(
+        savedInstanceState: Bundle?
+    ) {
         super.onCreate(savedInstanceState)
 
         setContent {
-            App(vm)
+
+            SarmayeYarTheme {
+
+                App(vm)
+            }
         }
     }
 }
 
 @Composable
-private fun App(vm: MainViewModel) {
+private fun App(
+    vm: MainViewModel
+) {
 
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val assets by
+        vm.assets.collectAsState()
 
-    var darkMode by remember {
-        mutableStateOf(
-            loadDarkMode(context)
-        )
-    }
+    val history by
+        vm.history.collectAsState()
 
-    SarmayeYarTheme(
-        darkMode = darkMode
-    ) {
+    val prices by
+        vm.prices.collectAsState()
 
-        val assets by vm.assets.collectAsState()
-        val history by vm.history.collectAsState()
-        val prices by vm.prices.collectAsState()
-        val busy by vm.busy.collectAsState()
+    val busy by
+        vm.busy.collectAsState()
 
-        var tab by remember {
+    var tab by
+        remember {
             mutableIntStateOf(0)
         }
 
-        Scaffold(
-            modifier = Modifier.fillMaxSize(),
+    Scaffold(
 
-            bottomBar = {
-                NavigationBar {
+        modifier =
+            Modifier.fillMaxSize(),
 
-                    listOf(
-                        "داشبورد",
-                        "دارایی‌ها",
-                        "تحلیل",
-                        "نمودار",
-                        "تنظیمات"
-                    ).forEachIndexed { i, label ->
+        bottomBar = {
 
-                        NavigationBarItem(
-                            selected = tab == i,
+            NavigationBar {
 
-                            onClick = {
-                                tab = i
-                            },
+                listOf(
+                    "داشبورد",
+                    "دارایی‌ها",
+                    "تحلیل",
+                    "سود/زیان",
+                    "سناریو",
+                    "تنظیمات"
+                ).forEachIndexed { i, label ->
 
-                            icon = {},
+                    NavigationBarItem(
 
-                            label = {
-                                Text(label)
-                            }
-                        )
-                    }
-                }
-            }
-        ) { innerPadding ->
+                        selected =
+                            tab == i,
 
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding)
-            ) {
+                        onClick = {
+                            tab = i
+                        },
 
-                when (tab) {
+                        icon = {},
 
-                    0 -> DashboardScreen(
-                        assets = assets,
-                        prices = prices,
-                        onRefresh = vm::refreshPrices,
-                        busy = busy
-                    )
-
-                    1 -> AssetsScreen(
-                        assets = assets,
-                        onAdd = vm::addAsset,
-                        onDelete = vm::deleteAsset,
-                        onUpdate = vm::updateAsset
-                    )
-
-                    2 -> AnalysisScreen(
-                        assets = assets
-                    )
-
-                    3 -> HistoryScreen(
-                        history = history
-                    )
-
-                    4 -> SettingsScreen(
-                        onBackup = vm::backup,
-                        darkMode = darkMode,
-                        onDarkModeChange = { enabled ->
-
-                            darkMode = enabled
-
-                            saveDarkMode(
-                                context,
-                                enabled
-                            )
+                        label = {
+                            Text(label)
                         }
                     )
                 }
+            }
+        }
+
+    ) { innerPadding ->
+
+        Box(
+
+            modifier =
+                Modifier
+                    .fillMaxSize()
+                    .padding(
+                        innerPadding
+                    )
+        ) {
+
+            when (tab) {
+
+                /*
+                 * داشبورد
+                 */
+                0 -> DashboardScreen(
+                    assets = assets,
+                    prices = prices,
+                    onRefresh =
+                        vm::refreshPrices,
+                    busy = busy
+                )
+
+                /*
+                 * دارایی‌ها
+                 */
+                1 -> AssetsScreen(
+
+                    assets = assets,
+
+                    onAdd =
+                        vm::addAsset,
+
+                    onDelete =
+                        vm::deleteAsset,
+
+                    onUpdate =
+                        vm::updateAsset
+                )
+
+                /*
+                 * تحلیل
+                 */
+                2 -> AnalysisScreen(
+                    assets = assets
+                )
+
+                /*
+                 * سود/زیان
+                 */
+                3 -> ProfitLossScreen(
+
+                    assets = assets,
+
+                    history = history,
+
+                    onRecord =
+                        vm::recordProfitLossSnapshot
+                )
+
+                /*
+                 * سناریو
+                 */
+                4 -> ScenarioScreen(
+                    assets = assets
+                )
+
+                /*
+                 * تنظیمات
+                 */
+                else -> SettingsScreen(
+                    vm::backup
+                )
             }
         }
     }
