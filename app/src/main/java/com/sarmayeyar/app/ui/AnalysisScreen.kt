@@ -9,18 +9,22 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.Card
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import com.sarmayeyar.app.model.Asset
 import com.sarmayeyar.app.util.Formatters
-import kotlin.math.PI
+import kotlin.math.min
 
 @Composable
 fun AnalysisScreen(
@@ -32,90 +36,39 @@ fun AnalysisScreen(
             it.currentValue
         }
 
-    Column(
-        modifier =
-            Modifier
-                .fillMaxSize()
-                .padding(16.dp)
+    LazyColumn(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp),
+
+        verticalArrangement =
+            Arrangement.spacedBy(10.dp)
     ) {
 
-        Text(
-            "تحلیل سرمایه",
-            style =
-                MaterialTheme.typography.headlineMedium
-        )
-
-        Spacer(
-            Modifier.height(12.dp)
-        )
-
-        if (assets.isEmpty()) {
+        item {
 
             Text(
-                "برای تحلیل، ابتدا دارایی ثبت کنید."
+                "تحلیل سرمایه",
+                style =
+                    MaterialTheme.typography
+                        .headlineMedium
             )
-
-            return
         }
 
-        /*
-         * =====================================================
-         * نمودار دایره‌ای ترکیب سبد
-         * =====================================================
-         */
+        if (assets.isNotEmpty()) {
 
-        Card(
-            modifier =
-                Modifier.fillMaxWidth()
-        ) {
-
-            Column(
-                modifier =
-                    Modifier.padding(16.dp)
-            ) {
-
-                Text(
-                    "ترکیب سبد سرمایه",
-                    style =
-                        MaterialTheme.typography.titleLarge
-                )
-
-                Spacer(
-                    Modifier.height(12.dp)
-                )
+            item {
 
                 PortfolioPieChart(
-                    assets = assets,
-                    total = total
-                )
-
-                Spacer(
-                    Modifier.height(12.dp)
-                )
-
-                Text(
-                    "ارزش کل سرمایه: ${
-                        Formatters.toman(total)
-                    }"
+                    assets = assets
                 )
             }
         }
 
-        Spacer(
-            Modifier.height(16.dp)
-        )
-
-        Text(
-            "جزئیات دارایی‌ها",
-            style =
-                MaterialTheme.typography.titleLarge
-        )
-
-        Spacer(
-            Modifier.height(8.dp)
-        )
-
-        assets.forEach { asset ->
+        items(
+            items = assets,
+            key = { it.id }
+        ) { asset ->
 
             val share =
                 if (total > 0L) {
@@ -128,179 +81,221 @@ fun AnalysisScreen(
 
             Card(
                 modifier =
-                    Modifier
-                        .fillMaxWidth()
-                        .padding(
-                            vertical = 4.dp
-                        )
+                    Modifier.fillMaxWidth()
             ) {
 
-                Row(
+                Column(
                     modifier =
-                        Modifier
-                            .fillMaxWidth()
-                            .padding(16.dp),
-                    horizontalArrangement =
-                        Arrangement.SpaceBetween
+                        Modifier.padding(16.dp)
                 ) {
 
-                    Column {
+                    Text(
+                        asset.name,
+                        style =
+                            MaterialTheme.typography
+                                .titleMedium
+                    )
 
-                        Text(
-                            asset.name,
-                            style =
-                                MaterialTheme.typography.titleMedium
-                        )
+                    Spacer(
+                        Modifier.height(4.dp)
+                    )
 
-                        Text(
-                            asset.type
-                        )
-                    }
+                    Text(
+                        "نوع: ${asset.type}"
+                    )
 
-                    Column {
-
-                        Text(
-                            Formatters.toman(
-                                asset.currentValue
-                            )
-                        )
-
-                        Text(
-                            "سهم: ${
+                    Text(
+                        "سهم فعلی: " +
                                 Formatters.percent(
                                     share
                                 )
-                            }"
-                        )
-                    }
+                    )
+
+                    Text(
+                        "ارزش: " +
+                                Formatters.toman(
+                                    asset.currentValue
+                                )
+                    )
+
+                    Text(
+                        "سرمایه‌گذاری اولیه: " +
+                                Formatters.toman(
+                                    asset.investedValue
+                                )
+                    )
+
+                    Text(
+                        "سود/زیان: " +
+                                Formatters.toman(
+                                    asset.profit
+                                )
+                    )
                 }
+            }
+        }
+
+        if (assets.isEmpty()) {
+
+            item {
+
+                Text(
+                    "برای تحلیل، ابتدا دارایی ثبت کنید."
+                )
             }
         }
     }
 }
 
+
 @Composable
 private fun PortfolioPieChart(
-    assets: List<Asset>,
-    total: Long
+    assets: List<Asset>
 ) {
 
-    val palette =
-        listOf(
-            Color(0xFFD4AF37),
-            Color(0xFF4CAF50),
-            Color(0xFF2196F3),
-            Color(0xFF9C27B0),
-            Color(0xFFFF9800),
-            Color(0xFF009688),
-            Color(0xFF795548),
-            Color(0xFF607D8B),
-            Color(0xFFE91E63)
-        )
-
-    val slices =
-        assets.mapIndexed { index, asset ->
-
-            val share =
-                if (total > 0L) {
-                    asset.currentValue.toFloat() /
-                            total.toFloat()
-                } else {
-                    0f
-                }
-
-            PieSlice(
-                name = asset.name,
-                share = share,
-                color =
-                    palette[
-                        index % palette.size
-                    ]
-            )
+    val total =
+        assets.sumOf {
+            it.currentValue
         }
 
-    Canvas(
-        modifier =
-            Modifier
-                .fillMaxWidth()
-                .height(260.dp)
-    ) {
-
-        val diameter =
-            minOf(
-                size.width,
-                size.height
-            ) * 0.72f
-
-        val topLeft =
-            Offset(
-                x = (size.width - diameter) / 2f,
-                y = (size.height - diameter) / 2f
-            )
-
-        var startAngle =
-            -90f
-
-        slices.forEach { slice ->
-
-            val sweep =
-                slice.share * 360f
-
-            drawArc(
-                color = slice.color,
-                startAngle = startAngle,
-                sweepAngle = sweep,
-                useCenter = true,
-                topLeft = topLeft,
-                size =
-                    androidx.compose.ui.geometry.Size(
-                        diameter,
-                        diameter
-                    )
-            )
-
-            startAngle += sweep
-        }
-
-        /*
-         * حاشیه دایره برای ظاهر مرتب‌تر
-         */
-        drawArc(
-            color =
-                MaterialTheme.colorScheme
-                    .onSurface
-                    .copy(alpha = 0.15f),
-            startAngle = 0f,
-            sweepAngle = 360f,
-            useCenter = false,
-            topLeft = topLeft,
-            size =
-                androidx.compose.ui.geometry.Size(
-                    diameter,
-                    diameter
-                ),
-            style =
-                Stroke(width = 2f)
-        )
+    if (total <= 0L) {
+        return
     }
 
-    Spacer(
-        Modifier.height(8.dp)
-    )
+    val colors =
+        listOf(
+            MaterialTheme.colorScheme.primary,
+            MaterialTheme.colorScheme.secondary,
+            MaterialTheme.colorScheme.tertiary,
+            MaterialTheme.colorScheme.error
+        )
 
-    /*
-     * راهنمای رنگ‌ها
-     */
+    val outlineColor =
+        MaterialTheme.colorScheme.onSurface.copy(
+            alpha = 0.15f
+        )
+
     Column(
-        verticalArrangement =
-            Arrangement.spacedBy(6.dp)
+        modifier =
+            Modifier.fillMaxWidth()
     ) {
 
-        slices.forEach { slice ->
+        Text(
+            "ترکیب سبد سرمایه",
+            style =
+                MaterialTheme.typography
+                    .titleLarge
+        )
+
+        Spacer(
+            Modifier.height(10.dp)
+        )
+
+        Canvas(
+            modifier =
+                Modifier
+                    .fillMaxWidth()
+                    .height(260.dp)
+        ) {
+
+            val diameter =
+                min(
+                    size.width,
+                    size.height
+                ) * 0.75f
+
+            val left =
+                (size.width - diameter) / 2f
+
+            val top =
+                (size.height - diameter) / 2f
+
+            var startAngle =
+                -90f
+
+            assets.forEachIndexed { index, asset ->
+
+                val sweepAngle =
+                    asset.currentValue
+                        .toFloat() /
+                            total.toFloat() *
+                            360f
+
+                drawArc(
+                    color =
+                        colors[
+                            index %
+                                colors.size
+                        ],
+
+                    startAngle =
+                        startAngle,
+
+                    sweepAngle =
+                        sweepAngle,
+
+                    useCenter = true,
+
+                    topLeft =
+                        Offset(
+                            left,
+                            top
+                        ),
+
+                    size =
+                        Size(
+                            diameter,
+                            diameter
+                        )
+                )
+
+                startAngle +=
+                    sweepAngle
+            }
+
+            drawArc(
+                color = outlineColor,
+
+                startAngle = 0f,
+
+                sweepAngle = 360f,
+
+                useCenter = false,
+
+                topLeft =
+                    Offset(
+                        left,
+                        top
+                    ),
+
+                size =
+                    Size(
+                        diameter,
+                        diameter
+                    ),
+
+                style =
+                    Stroke(
+                        width = 2f
+                    )
+            )
+        }
+
+        Spacer(
+            Modifier.height(8.dp)
+        )
+
+        assets.forEachIndexed { index, asset ->
+
+            val share =
+                asset.currentValue *
+                        100.0 /
+                        total
 
             Row(
                 modifier =
                     Modifier.fillMaxWidth(),
+
                 horizontalArrangement =
                     Arrangement.SpaceBetween
             ) {
@@ -310,33 +305,32 @@ private fun PortfolioPieChart(
                     Canvas(
                         modifier =
                             Modifier
-                                .padding(end = 8.dp)
-                                .height(14.dp)
-                                .fillMaxWidth(0.04f)
+                                .padding(
+                                    end = 8.dp
+                                )
+                                .size(12.dp)
                     ) {
 
-                        drawRect(
-                            color = slice.color
+                        drawCircle(
+                            color =
+                                colors[
+                                    index %
+                                        colors.size
+                                ]
                         )
                     }
 
                     Text(
-                        slice.name
+                        asset.name
                     )
                 }
 
                 Text(
                     Formatters.percent(
-                        slice.share * 100.0
+                        share
                     )
                 )
             }
         }
     }
 }
-
-private data class PieSlice(
-    val name: String,
-    val share: Float,
-    val color: Color
-)
