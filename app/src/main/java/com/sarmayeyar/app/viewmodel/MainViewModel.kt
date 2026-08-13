@@ -43,8 +43,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         _assets.value = next
         repo.saveAssets(next)
-
-        // در نسخه جدید، افزودن دارایی Snapshot خودکار ایجاد نمی‌کند.
     }
 
     fun deleteAsset(asset: Asset) {
@@ -54,8 +52,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         _assets.value = next
         repo.saveAssets(next)
-
-        // حذف دارایی نیز Snapshot خودکار ایجاد نمی‌کند.
     }
 
     fun updateAsset(asset: Asset) {
@@ -65,8 +61,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         _assets.value = next
         repo.saveAssets(next)
-
-        // ویرایش دارایی نیز Snapshot خودکار ایجاد نمی‌کند.
     }
 
     fun refreshPrices() {
@@ -91,23 +85,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                     "قیمت‌های آنلاین به‌روزرسانی شدند."
             }
 
-            /*
-             * نکته مهم:
-             *
-             * قیمت آنلاین دیگر داخل Asset ذخیره نمی‌شود.
-             * بنابراین ارزش ثبت‌شده سرمایه تغییر نمی‌کند.
-             *
-             * همچنین Refresh دیگر Snapshot ایجاد نمی‌کند.
-             */
-
             _busy.value = false
         }
     }
 
     /*
-     * ارزش رسمی سرمایه:
+     * ارزش رسمی سرمایه.
      *
-     * این مقدار همان ارزش ثبت‌شده دارایی‌های کاربر است
+     * این مقدار فقط از ارزش ثبت‌شده دارایی‌ها استفاده می‌کند
      * و به قیمت آنلاین وابسته نیست.
      */
     fun totalRegisteredValue(): Long {
@@ -117,13 +102,10 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /*
-     * ارزش لحظه‌ای:
+     * ارزش لحظه‌ای سرمایه.
      *
-     * فعلاً برای طلا و تتر محاسبه می‌شود.
-     * نقره و مس بعد از اضافه شدن منبع قیمت کاریزما
-     * به این بخش اضافه خواهند شد.
-     *
-     * سایر دارایی‌ها همان ارزش ثبت‌شده خودشان را حفظ می‌کنند.
+     * این مقدار صرفاً برای نمایش وضعیت لحظه‌ای کاربر است
+     * و نباید جایگزین ارزش رسمی سرمایه شود.
      */
     fun totalLiveValue(): Long {
 
@@ -160,10 +142,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     }
 
     /*
-     * ثبت دستی Snapshot سود و زیان
+     * ثبت دستی Snapshot سود و زیان.
      *
-     * این تابع فقط زمانی باید فراخوانی شود که
-     * کاربر خودش دستور محاسبه سود/زیان را بدهد.
+     * این تابع فقط با دستور مستقیم کاربر اجرا می‌شود.
      */
     fun recordProfitLossSnapshot() {
 
@@ -175,9 +156,23 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
+        /*
+         * ارزش هر عنوان دارایی در زمان ثبت.
+         *
+         * این مقادیر از ارزش رسمی ثبت‌شده دارایی‌ها
+         * گرفته می‌شوند و قیمت آنلاین در آنها دخالت ندارد.
+         */
+        val categoryValues =
+            _assets.value
+                .groupBy { it.type }
+                .mapValues { (_, categoryAssets) ->
+                    categoryAssets.sumOf { it.currentValue }
+                }
+
         val point = HistoryPoint(
             timestamp = System.currentTimeMillis(),
-            totalToman = total
+            totalToman = total,
+            categoryValues = categoryValues
         )
 
         val nextHistory =
