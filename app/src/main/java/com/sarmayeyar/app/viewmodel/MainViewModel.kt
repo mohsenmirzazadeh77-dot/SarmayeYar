@@ -16,28 +16,38 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
-class MainViewModel(app: Application) : AndroidViewModel(app) {
+class MainViewModel(
+    app: Application
+) : AndroidViewModel(app) {
 
     private val repo =
-        InvestmentRepository(LocalStore(app))
+        InvestmentRepository(
+            LocalStore(app)
+        )
 
     private val priceService =
         PriceService()
 
     private val _assets =
-        MutableStateFlow(repo.assets())
+        MutableStateFlow(
+            repo.assets()
+        )
 
     val assets: StateFlow<List<Asset>> =
         _assets.asStateFlow()
 
     private val _history =
-        MutableStateFlow(repo.history())
+        MutableStateFlow(
+            repo.history()
+        )
 
     val history: StateFlow<List<HistoryPoint>> =
         _history.asStateFlow()
 
     private val _prices =
-        MutableStateFlow(LivePrices())
+        MutableStateFlow(
+            LivePrices()
+        )
 
     val prices: StateFlow<LivePrices> =
         _prices.asStateFlow()
@@ -54,31 +64,38 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
     val message: StateFlow<String?> =
         _message.asStateFlow()
 
-    /*
-     * افزودن دارایی
-     *
-     * توجه:
-     * این عملیات دیگر Snapshot سود/زیان ایجاد نمی‌کند.
-     */
-    fun addAsset(asset: Asset) {
+
+    // =========================================================
+    // دارایی‌ها
+    // =========================================================
+
+    fun addAsset(
+        asset: Asset
+    ) {
 
         val next =
             _assets.value +
                     asset.copy(
-                        id = System.currentTimeMillis()
+                        id =
+                            System.currentTimeMillis()
                     )
 
         _assets.value = next
 
         repo.saveAssets(next)
+
+        /*
+         * عمداً Snapshot ثبت نمی‌کنیم.
+         *
+         * سود/زیان فقط با دستور دستی کاربر
+         * ثبت خواهد شد.
+         */
     }
 
-    /*
-     * حذف دارایی
-     *
-     * Snapshot خودکار ایجاد نمی‌شود.
-     */
-    fun deleteAsset(asset: Asset) {
+
+    fun deleteAsset(
+        asset: Asset
+    ) {
 
         val next =
             _assets.value.filterNot {
@@ -88,17 +105,20 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _assets.value = next
 
         repo.saveAssets(next)
+
+        /*
+         * Snapshot خودکار ممنوع است.
+         */
     }
 
-    /*
-     * ویرایش دارایی
-     *
-     * Snapshot خودکار ایجاد نمی‌شود.
-     */
-    fun updateAsset(asset: Asset) {
+
+    fun updateAsset(
+        asset: Asset
+    ) {
 
         val next =
             _assets.value.map {
+
                 if (it.id == asset.id) {
                     asset
                 } else {
@@ -109,16 +129,17 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         _assets.value = next
 
         repo.saveAssets(next)
+
+        /*
+         * Snapshot خودکار ممنوع است.
+         */
     }
 
-    /*
-     * دریافت قیمت آنلاین
-     *
-     * قیمت آنلاین فقط برای به‌روزرسانی
-     * ارزش لحظه‌ای دارایی‌ها استفاده می‌شود.
-     *
-     * این عملیات Snapshot سود/زیان ایجاد نمی‌کند.
-     */
+
+    // =========================================================
+    // قیمت‌های آنلاین
+    // =========================================================
+
     fun refreshPrices() {
 
         viewModelScope.launch {
@@ -129,7 +150,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 "در حال دریافت قیمت تتر و طلا..."
 
             val result =
-                withContext(Dispatchers.IO) {
+                withContext(
+                    Dispatchers.IO
+                ) {
                     priceService.fetch()
                 }
 
@@ -139,11 +162,6 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                 result.usdtToman != null &&
                         result.usdtToman > 0
 
-            /*
-             * قیمت آنلاین طلا فعلاً در محاسبات آنلاین
-             * برنامه نگه داشته می‌شود، اما در صورت
-             * نبود قیمت، هیچ خطایی ایجاد نمی‌کنیم.
-             */
             val goldOk =
                 result.gold18TomanPerGram != null &&
                         result.gold18TomanPerGram > 0
@@ -151,38 +169,34 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             _message.value =
                 when {
 
-                    usdtOk && goldOk -> {
+                    usdtOk && goldOk ->
                         "تتر و طلای ۱۸ عیار با موفقیت به‌روزرسانی شدند."
-                    }
 
-                    usdtOk && !goldOk -> {
-                        "تتر با موفقیت دریافت شد؛ " +
-                                "اما قیمت طلای ۱۸ عیار دریافت نشد."
-                    }
+                    usdtOk && !goldOk ->
+                        "تتر با موفقیت دریافت شد؛ اما قیمت طلای ۱۸ عیار دریافت نشد."
 
-                    !usdtOk && goldOk -> {
-                        "قیمت طلا دریافت شد؛ " +
-                                "اما تتر دریافت نشد."
-                    }
+                    !usdtOk && goldOk ->
+                        "قیمت طلا دریافت شد؛ اما تتر دریافت نشد."
 
-                    else -> {
+                    else ->
                         "دریافت قیمت تتر و طلا ناموفق بود."
-                    }
                 }
 
+            /*
+             * قیمت آنلاین فقط وضعیت فعلی دارایی را
+             * به‌روزرسانی می‌کند.
+             *
+             * این عملیات Snapshot سود/زیان ایجاد نمی‌کند.
+             */
             applyLivePrices(result)
 
             _busy.value = false
         }
     }
 
-    /*
-     * اعمال قیمت‌های آنلاین روی دارایی‌ها
-     *
-     * این تابع Snapshot ایجاد نمی‌کند.
-     */
+
     private fun applyLivePrices(
-        p: LivePrices
+        prices: LivePrices
     ) {
 
         val next =
@@ -192,7 +206,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
                     "تتر" -> {
 
-                        p.usdtToman?.let { price ->
+                        prices.usdtToman?.let { price ->
 
                             asset.copy(
                                 currentPriceToman = price,
@@ -202,16 +216,9 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         } ?: asset
                     }
 
-                    /*
-                     * قیمت آنلاین طلا فعلاً فقط در صورت
-                     * دریافت موفق اعمال می‌شود.
-                     *
-                     * اگر قیمت طلا دریافت نشود،
-                     * مقدار قبلی دارایی دست‌نخورده می‌ماند.
-                     */
                     "طلا" -> {
 
-                        p.gold18TomanPerGram?.let { price ->
+                        prices.gold18TomanPerGram?.let { price ->
 
                             asset.copy(
                                 currentPriceToman = price,
@@ -221,25 +228,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
                         } ?: asset
                     }
 
-                    else -> asset
+                    else ->
+                        asset
                 }
             }
 
         _assets.value = next
 
         repo.saveAssets(next)
+
+        /*
+         * مهم:
+         * اینجا snapshot() نداریم.
+         */
     }
 
-    /*
-     * =========================================================
-     * ثبت دستی Snapshot سود/زیان
-     * =========================================================
-     *
-     * این تنها نقطه‌ای است که HistoryPoint جدید ایجاد می‌شود.
-     *
-     * کاربر باید خودش از صفحه «سود/زیان»
-     * دستور ثبت محاسبه را صادر کند.
-     */
+
+    // =========================================================
+    // ثبت دستی سود / زیان
+    // =========================================================
+
     fun recordProfitLossSnapshot() {
 
         val currentAssets =
@@ -251,20 +259,24 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             }
 
         if (total <= 0L) {
+
             _message.value =
-                "ارزش سرمایه برای ثبت سود/زیان معتبر نیست."
+                "ابتدا حداقل یک دارایی با ارزش معتبر ثبت کنید."
+
             return
         }
 
         /*
-         * ارزش هر عنوان دارایی
+         * ارزش هر عنوان دارایی در لحظه ثبت.
          *
-         * کلید فعلاً نام دارایی است تا با ساختار
-         * categoryValues فعلی سازگار بماند.
+         * این مقادیر داخل Snapshot ذخیره می‌شوند
+         * و بعداً با ویرایش دارایی تغییر نمی‌کنند.
          */
         val categoryValues =
             currentAssets
-                .groupBy { it.name }
+                .groupBy {
+                    it.name
+                }
                 .mapValues { (_, list) ->
                     list.sumOf {
                         it.currentValue
@@ -273,16 +285,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         val point =
             HistoryPoint(
-                timestamp = System.currentTimeMillis(),
-                totalToman = total,
-                categoryValues = categoryValues
+                timestamp =
+                    System.currentTimeMillis(),
+
+                totalToman =
+                    total,
+
+                categoryValues =
+                    categoryValues
             )
 
-        /*
-         * فقط Snapshotهای ثبت‌شده توسط کاربر ذخیره می‌شوند.
-         *
-         * حداکثر 365 نقطه نگه می‌داریم.
-         */
         val updatedHistory =
             (
                 _history.value + point
@@ -295,59 +307,26 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
             updatedHistory
         )
 
-        /*
-         * پیام مناسب برای کاربر
-         */
-        if (updatedHistory.size == 1) {
-
-            _message.value =
-                "نقطه شروع سود/زیان با موفقیت ثبت شد."
-
-        } else {
-
-            val previous =
-                updatedHistory[
-                    updatedHistory.lastIndex - 1
-                ]
-
-            val difference =
-                total - previous.totalToman
-
-            val percent =
-                if (previous.totalToman > 0L) {
-                    difference * 100.0 /
-                            previous.totalToman
-                } else {
-                    0.0
-                }
-
-            val sign =
-                if (difference >= 0L) "+" else ""
-
-            _message.value =
-                "سود/زیان ثبت شد: " +
-                        "$sign$difference تومان " +
-                        "(${String.format("%.2f", percent)}%)"
-        }
+        _message.value =
+            "محاسبه سود/زیان با موفقیت ثبت شد."
     }
 
-    /*
-     * پاک کردن پیام وضعیت
-     */
-    fun clearMessage() {
-        _message.value = null
-    }
 
-    /*
-     * پشتیبان‌گیری
-     */
+    // =========================================================
+    // پشتیبان‌گیری
+    // =========================================================
+
     fun backup(): String =
         repo.backup()
 
-    /*
-     * بازیابی اطلاعات
-     */
-    fun restore(json: String) {
+
+    // =========================================================
+    // بازیابی
+    // =========================================================
+
+    fun restore(
+        json: String
+    ) {
 
         repo.restore(json)
 
@@ -356,5 +335,14 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
         _history.value =
             repo.history()
+    }
+
+
+    // =========================================================
+    // پیام
+    // =========================================================
+
+    fun clearMessage() {
+        _message.value = null
     }
 }
